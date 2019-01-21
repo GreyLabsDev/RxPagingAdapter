@@ -17,7 +17,7 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
     var itemsChannel = PublishSubject.create<MutableList<Any>>()
     var loadingStateChannel = PublishSubject.create<PAGING_LOADING_STATE>()
 
-    var loadingState: PAGING_LOADING_STATE = PAGING_LOADING_STATE.LOADING
+    var loadingState: PAGING_LOADING_STATE = PAGING_LOADING_STATE.DONE
 
     init {
         initPaging()
@@ -47,8 +47,8 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
                     pagingUpdater?.apply {
                         if (isReachedEndOfList.not()) {
                             loadNewItems()
-                        }
-                    }
+                        } else updateLoadingState(PAGING_LOADING_STATE.DONE)
+                    } ?: updateLoadingState(PAGING_LOADING_STATE.DONE)
                 }
             }
         })
