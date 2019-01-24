@@ -162,15 +162,16 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
         var currentPosition = offset
         var isReachedEndOfList = false
 
-        fun setOffset(newOffset: Int) {
-            offset = newOffset
-            if (firstLoad) {
-                currentPosition = offset
+        fun setup(offset: Int? = null, count: Int? = null) {
+            offset?.let {
+                this.offset = it
+                if (firstLoad) {
+                    currentPosition = offset
+                }
             }
-        }
-
-        fun setCount(newCount: Int) {
-            this.count = newCount
+            count?.let {
+                this.count = it
+            }
         }
 
         fun getCount(): Int {
