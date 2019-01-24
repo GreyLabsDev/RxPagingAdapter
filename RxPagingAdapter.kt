@@ -3,6 +3,9 @@ enum class PAGING_LOADING_STATE {
 }
 
 /**[RxPagingUpdater]
+ *
+ * @author Sergey Sh. (GreyLabsDev)
+ *
  * @param disposables
  *
  * @property pagingUpdater
