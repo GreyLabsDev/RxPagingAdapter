@@ -13,11 +13,9 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
 
     var items: MutableList<Any> = mutableListOf()
     var currentPosition = 0
-
+    var loadingState: PAGING_LOADING_STATE = PAGING_LOADING_STATE.DONE
     var itemsChannel = PublishSubject.create<MutableList<Any>>()
     var loadingStateChannel = PublishSubject.create<PAGING_LOADING_STATE>()
-
-    var loadingState: PAGING_LOADING_STATE = PAGING_LOADING_STATE.DONE
 
     init {
         initPaging()
@@ -27,8 +25,8 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
 
     override fun getItemViewType(position: Int): Int {
         return if (items[position] is PAGING_LOADING_STATE) {
-            VIEW_TYPE_FOOTER
-        } else VIEW_TYPE_DATA
+            PAGING_VIEW_TYPE_FOOTER
+        } else PAGING_VIEW_TYPE_DATA
     }
 
     override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
@@ -41,7 +39,6 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
                 super.onScrollStateChanged(recyclerView, newState)
 
                 val lastVisibleItemPosition = (recyclerView.layoutManager as LinearLayoutManager).findLastVisibleItemPosition()
-
                 if (lastVisibleItemPosition == itemCount - 1) {
                     loadingState = PAGING_LOADING_STATE.LOADING
                     pagingUpdater?.apply {
@@ -113,12 +110,21 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
         pagingUpdater = updater
     }
 
-    fun clearItemsAndReload() {
+    /**@cleatItemsAndReload
+     * Resetting adapter and its updater to initial state
+     * and loading items from pagination start
+     */
+
+    fun cleatItemsAndReload() {
         items.clear()
         notifyDataSetChanged()
         pagingUpdater?.resetPosition()
         pagingUpdater?.loadNewItems()
     }
+
+    /**@addItems
+     * Adding item to end of current items list with adapter notification
+     */
 
     fun addItem(newItem: Any) {
         if (items.contains(newItem).not()) {
@@ -127,6 +133,10 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
         }
     }
 
+    /**@addItems
+     * Adding pack of item to end of current items list with adapter notification
+     */
+
     fun addItems(newItems: MutableList<Any>) {
         if (items.intersect(newItems).size != newItems.size) {
             val startPosition = itemCount
@@ -134,6 +144,10 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
             notifyItemRangeInserted(startPosition, newItems.size)
         }
     }
+
+    /**@insertItem
+     * Inserting item to defined position with adapter notification
+     */
 
     fun insertItem(newItem: Any, position: Int) {
         if (items.contains(newItem).not()) {
@@ -146,23 +160,32 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
         return if (items.lastIndex >= position) items[position] else null
     }
 
+    /**@removeItemAt
+     * Removing item item from defined position with adapter notification
+     * and calling showPlaceholder() from pagingAdapter - if you are using PlaceholderSwitcher,
+     * it will show placeholder after last item will be deleted
+     */
+
     fun removeItemAt(position: Int) {
         if (loadingState == PAGING_LOADING_STATE.DONE) {
             items.removeAt(position)
             notifyItemRemoved(position)
+            if (items.size == 0) {
+                pagingUpdater?.showPlaceholder()
+            }
         }
     }
 
     abstract class RxPagingUpdater {
         private var firstLoad = true
-
         private var offset: Int = 0
         private var count: Int = 0
 
+        var placeholderSwitcher: PlaceholderSwitcher? = null
         var currentPosition = offset
         var isReachedEndOfList = false
 
-        fun setup(offset: Int? = null, count: Int? = null) {
+        fun setup(offset: Int? = null, count: Int? = null, placeholderSwitcher: PlaceholderSwitcher? = null) {
             offset?.let {
                 this.offset = it
                 if (firstLoad) {
@@ -172,14 +195,22 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
             count?.let {
                 this.count = it
             }
+            placeholderSwitcher?.let {
+                this.placeholderSwitcher = it
+            }
         }
 
         fun getCount(): Int {
             return count
         }
 
+        /**@resetPosition
+         * Uses to reset state of rxUpdater to initial
+         */
+
         fun resetPosition() {
             currentPosition = 0
+            isReachedEndOfList = false
         }
 
         /**
@@ -194,11 +225,34 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
 
         abstract fun loadNewItems()
 
+        fun showPlaceholder() {
+            placeholderSwitcher?.showPlaceholder()
+        }
+
+        fun hidePlaceholder() {
+            placeholderSwitcher?.hidePlaceholder()
+        }
+
+        /**@updateCurrentPosition
+         * Call this method in your rxUpdater when it loads new pack of items, it will update paging position
+         * or switch to ReachedEndOfList state (this flag uses to avoid unnecessary calls of loadNewItems() method)
+         */
+
         fun updateCurrentPosition(itemsLoaded: Int) {
             if (itemsLoaded < count) {
                 isReachedEndOfList = true
             }
             currentPosition += itemsLoaded
         }
+    }
+
+    /**@PlaceholderSwitcher
+     * Not necessary interface, but you can realize it and add to updater in setup() method
+     * if you need to switch your placeholder state in case when updater loads empty or null list of items
+      */
+
+    interface PlaceholderSwitcher {
+        fun showPlaceholder()
+        fun hidePlaceholder()
     }
 }
