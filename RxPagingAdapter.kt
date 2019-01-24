@@ -113,6 +113,13 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
         pagingUpdater = updater
     }
 
+    fun clearItemsAndReload() {
+        items.clear()
+        notifyDataSetChanged()
+        pagingUpdater?.resetPosition()
+        pagingUpdater?.loadNewItems()
+    }
+
     fun addItem(newItem: Any) {
         if (items.contains(newItem).not()) {
             items.add(newItem)
@@ -170,10 +177,14 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
             return count
         }
 
+        fun resetPosition() {
+            currentPosition = 0
+        }
+
         /**
          * @loadNewItems
          * Realization must contain:
-         * - itemsChannel, loadingStateChannel from created RxPaginAdapter
+         * - itemsChannel, loadingStateChannel from created RxPagingAdapter
          * - calls onNext of loadingStateChannel when updater is loading, loaded items or catched error
          *   it needs to support changing loading states and adding appropriate footer to recyclerView
          * - calls onNext of itemsChannel to send new items to RxPagingAdapter
