@@ -2,6 +2,18 @@ enum class PAGING_LOADING_STATE {
     DONE, LOADING, ERROR
 }
 
+/**[RxPagingUpdater]
+ * @param disposables
+ *
+ * @property pagingUpdater
+ * @property hasFooter
+ * @property items
+ * @property currentPosition
+ * @property loadingState
+ * @property itemsChannel
+ * @property loadingStateChannel
+ */
+
 abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: CompositeDisposable) : RecyclerView.Adapter<VH>() {
 
     //TODO 1. Add all comments
@@ -51,6 +63,10 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
         })
     }
 
+    /**[initPaging]
+     *
+     */
+
     private fun initPaging() {
         itemsChannel.let { channel ->
             disposables += channel.subscribeOn(Schedulers.io())
@@ -69,6 +85,10 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
                     )
         }
     }
+
+    /**[updateLoadingState]
+     * @param state
+     */
 
     private fun updateLoadingState(state: PAGING_LOADING_STATE) {
         val footerPosition = items.size - 1
@@ -106,11 +126,15 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
         loadingState = state
     }
 
+    /**[setPagingUpdater]
+     * @param updater
+     */
+
     fun setPagingUpdater(updater: RxPagingUpdater?) {
         pagingUpdater = updater
     }
 
-    /**@cleatItemsAndReload
+    /**[cleatItemsAndReload]
      * Resetting adapter and its updater to initial state
      * and loading items from pagination start
      */
@@ -122,8 +146,9 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
         pagingUpdater?.loadNewItems()
     }
 
-    /**@addItems
+    /**[addItems]
      * Adding item to end of current items list with adapter notification
+     * @param newItem
      */
 
     fun addItem(newItem: Any) {
@@ -133,8 +158,9 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
         }
     }
 
-    /**@addItems
+    /**[addItems]
      * Adding pack of item to end of current items list with adapter notification
+     * @param newItems
      */
 
     fun addItems(newItems: MutableList<Any>) {
@@ -145,8 +171,10 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
         }
     }
 
-    /**@insertItem
+    /**[insertItem]
      * Inserting item to defined position with adapter notification
+     * @param newItem
+     * @param position
      */
 
     fun insertItem(newItem: Any, position: Int) {
@@ -160,10 +188,11 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
         return if (items.lastIndex >= position) items[position] else null
     }
 
-    /**@removeItemAt
+    /**[removeItemAt]
      * Removing item item from defined position with adapter notification
-     * and calling showPlaceholder() from pagingAdapter - if you are using PlaceholderSwitcher,
+     * and calling [RxPagingUpdater.showPlaceholder] from pagingAdapter - if you are using PlaceholderSwitcher,
      * it will show placeholder after last item will be deleted
+     * @param position
      */
 
     fun removeItemAt(position: Int) {
@@ -176,8 +205,17 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
         }
     }
 
+    /**[RxPagingUpdater]
+     * @property isFirstLoad
+     * @property offset
+     * @property count
+     * @property placeholderSwitcher
+     * @property currentPosition
+     * @property isReachedEndOfList
+     */
+
     abstract class RxPagingUpdater {
-        private var firstLoad = true
+        private var isFirstLoad = true
         private var offset: Int = 0
         private var count: Int = 0
 
@@ -185,10 +223,18 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
         var currentPosition = offset
         var isReachedEndOfList = false
 
+        /**
+         * [setup]
+         * Method for initial setup of just created updater
+         * @param offset
+         * @param count
+         * @param placeholderSwitcher
+         */
+
         fun setup(offset: Int? = null, count: Int? = null, placeholderSwitcher: PlaceholderSwitcher? = null) {
             offset?.let {
                 this.offset = it
-                if (firstLoad) {
+                if (isFirstLoad) {
                     currentPosition = offset
                 }
             }
@@ -204,7 +250,7 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
             return count
         }
 
-        /**@resetPosition
+        /**[resetPosition]
          * Uses to reset state of rxUpdater to initial
          */
 
@@ -214,7 +260,7 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
         }
 
         /**
-         * @loadNewItems
+         * [loadNewItems]
          * Realization must contain:
          * - itemsChannel, loadingStateChannel from created RxPagingAdapter
          * - calls onNext of loadingStateChannel when updater is loading, loaded items or catched error
@@ -233,9 +279,10 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
             placeholderSwitcher?.hidePlaceholder()
         }
 
-        /**@updateCurrentPosition
+        /**[updateCurrentPosition]
          * Call this method in your rxUpdater when it loads new pack of items, it will update paging position
-         * or switch to ReachedEndOfList state (this flag uses to avoid unnecessary calls of loadNewItems() method)
+         * or switch to [isReachedEndOfList] state (this flag uses to avoid unnecessary calls of [loadNewItems] method)
+         * @param itemsLoaded
          */
 
         fun updateCurrentPosition(itemsLoaded: Int) {
@@ -246,8 +293,8 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
         }
     }
 
-    /**@PlaceholderSwitcher
-     * Not necessary interface, but you can realize it and add to updater in setup() method
+    /**[PlaceholderSwitcher]
+     * Not necessary interface, but you can realize it and add to updater in [RxPagingUpdater.setup] method
      * if you need to switch your placeholder state in case when updater loads empty or null list of items
       */
 
