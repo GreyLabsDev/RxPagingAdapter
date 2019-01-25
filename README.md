@@ -1,2 +1,2 @@
 # RxPagingAdapter
-Custom adapter realization to add pagination for Android RecyclerView with fully controllable adapter items list and loading status footer. (Work in progress)
+Custom adapter realization. Adding pagination for Android RecyclerView with fully controllable adapter items list, loading status footer and optional controller for placeholder. (Work in progress)
