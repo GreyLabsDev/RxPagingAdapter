@@ -101,7 +101,7 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
                 if (footerPosition < 0) {
                     addItem(state)
                 } else {
-                    getItem(footerPosition)?.let {item ->
+                    getItem(footerPosition)?.let { item ->
                         if (item is PAGING_LOADING_STATE) {
                             items[footerPosition] = state
                             notifyItemChanged(footerPosition)
@@ -111,9 +111,13 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
             }
             PAGING_LOADING_STATE.ERROR -> {
                 hasFooter = true
-                getItem(footerPosition)?.let {
-                    items[footerPosition] = state
-                    notifyItemChanged(footerPosition)
+                if (footerPosition < 0) {
+                    addItem(state)
+                } else {
+                    getItem(footerPosition)?.let {
+                        items[footerPosition] = state
+                        notifyItemChanged(footerPosition)
+                    }
                 }
             }
             PAGING_LOADING_STATE.DONE -> {
