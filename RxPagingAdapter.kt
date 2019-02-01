@@ -6,7 +6,7 @@ enum class PAGING_LOADING_STATE {
     DONE, LOADING, ERROR
 }
 
-/**[RxPagingUpdater]
+/**[RxPagingAdapter]
  *
  * @author Sergey Sh. (GreyLabsDev)
  *
