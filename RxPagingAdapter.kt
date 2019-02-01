@@ -57,15 +57,17 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
 
-                if (recyclerView.layoutManager is LinearLayoutManager) {
-                    val lastVisibleItemPosition = (recyclerView.layoutManager as LinearLayoutManager).findLastVisibleItemPosition()
-                    if (lastVisibleItemPosition == itemCount - 1) {
-                        loadingState = PAGING_LOADING_STATE.LOADING
-                        pagingUpdater?.apply {
-                            if (isReachedEndOfList.not()) {
-                                loadNewItems()
-                            } else updateLoadingState(PAGING_LOADING_STATE.DONE)
-                        } ?: updateLoadingState(PAGING_LOADING_STATE.DONE)
+                when (recyclerView.layoutManager) {
+                    is LinearLayoutManager -> {
+                        val lastVisibleItemPosition = (recyclerView.layoutManager as LinearLayoutManager).findLastVisibleItemPosition()
+                        if (lastVisibleItemPosition == itemCount - 1) {
+                            loadingState = PAGING_LOADING_STATE.LOADING
+                            pagingUpdater?.apply {
+                                if (isReachedEndOfList.not()) {
+                                    loadNewItems()
+                                } else updateLoadingState(PAGING_LOADING_STATE.DONE)
+                            } ?: updateLoadingState(PAGING_LOADING_STATE.DONE)
+                        }
                     }
                 }
             }
