@@ -102,7 +102,6 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
     }
 
     private fun updateLoadingState(state: PAGING_LOADING_STATE) {
-        val footerPosition = items.size - 1
         when (state) {
             PAGING_LOADING_STATE.LOADING -> {
                 addLoadingFooter(state)
