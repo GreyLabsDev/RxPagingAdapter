@@ -1,3 +1,7 @@
+/** [PAGING_LOADING_STATE]
+ *
+ */
+
 enum class PAGING_LOADING_STATE {
     DONE, LOADING, ERROR
 }
