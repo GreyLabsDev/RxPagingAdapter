@@ -57,31 +57,39 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
 
-                val lastVisibleItemPosition = (recyclerView.layoutManager as LinearLayoutManager).findLastVisibleItemPosition()
-                if (lastVisibleItemPosition == itemCount - 1) {
-                    loadingState = PAGING_LOADING_STATE.LOADING
-                    pagingUpdater?.apply {
-                        if (isReachedEndOfList.not()) {
-                            loadNewItems()
-                        } else updateLoadingState(PAGING_LOADING_STATE.DONE)
-                    } ?: updateLoadingState(PAGING_LOADING_STATE.DONE)
+                if (recyclerView.layoutManager is LinearLayoutManager) {
+                    val lastVisibleItemPosition = (recyclerView.layoutManager as LinearLayoutManager).findLastVisibleItemPosition()
+                    if (lastVisibleItemPosition == itemCount - 1) {
+                        loadingState = PAGING_LOADING_STATE.LOADING
+                        pagingUpdater?.apply {
+                            if (isReachedEndOfList.not()) {
+                                loadNewItems()
+                            } else updateLoadingState(PAGING_LOADING_STATE.DONE)
+                        } ?: updateLoadingState(PAGING_LOADING_STATE.DONE)
+                    }
                 }
             }
         })
     }
 
-    /**[initPaging]
-     *
-     */
-
     private fun initPaging() {
+        subscribeToItemsChannel()
+        subscribeToLoadingStateChannel()
+    }
+
+    private fun subscribeToItemsChannel() {
         itemsChannel.let { channel ->
             disposables += channel.subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe({ newItems ->
-                        addItems(newItems)
-                    }, {}, {})
+                    .subscribe(
+                            { newItems ->
+                                addItems(newItems)
+                            }, {}, {}
+                    )
         }
+    }
+
+    private fun subscribeToLoadingStateChannel() {
         loadingStateChannel.let { channel ->
             disposables += channel.subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
@@ -93,48 +101,59 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
         }
     }
 
-    /**[updateLoadingState]
-     * @param state
-     */
-
     private fun updateLoadingState(state: PAGING_LOADING_STATE) {
         val footerPosition = items.size - 1
         when (state) {
             PAGING_LOADING_STATE.LOADING -> {
-                hasFooter = true
-                if (footerPosition < 0) {
-                    addItem(state)
-                } else {
-                    getItem(footerPosition)?.let { item ->
-                        if (item is PAGING_LOADING_STATE) {
-                            items[footerPosition] = state
-                            notifyItemChanged(footerPosition)
-                        } else addItem(state)
-                    }
-                }
+                addLoadingFooter(state)
             }
             PAGING_LOADING_STATE.ERROR -> {
-                hasFooter = true
-                if (footerPosition < 0) {
-                    addItem(state)
-                } else {
-                    getItem(footerPosition)?.let {
-                        items[footerPosition] = state
-                        notifyItemChanged(footerPosition)
-                    }
-                }
+                addErrorFooter(state)
             }
             PAGING_LOADING_STATE.DONE -> {
-                if (hasFooter) {
-                    hasFooter = false
-                    getItem(footerPosition)?.let { footerItem ->
-                        items.remove(footerItem)
-                        notifyItemRemoved(footerPosition)
-                    }
-                }
+                removeFooter()
             }
         }
         loadingState = state
+    }
+
+    private fun addLoadingFooter(state: PAGING_LOADING_STATE) {
+        val footerPosition = items.size - 1
+        hasFooter = true
+        if (footerPosition < 0) {
+            addItem(state)
+        } else {
+            getItem(footerPosition)?.let { item ->
+                if (item is PAGING_LOADING_STATE) {
+                    items[footerPosition] = state
+                    notifyItemChanged(footerPosition)
+                } else addItem(state)
+            }
+        }
+    }
+
+    private fun addErrorFooter(state: PAGING_LOADING_STATE) {
+        val footerPosition = items.size - 1
+        hasFooter = true
+        if (footerPosition < 0) {
+            addItem(state)
+        } else {
+            getItem(footerPosition)?.let {
+                items[footerPosition] = state
+                notifyItemChanged(footerPosition)
+            }
+        }
+    }
+
+    private fun removeFooter() {
+        val footerPosition = items.size - 1
+        if (hasFooter) {
+            hasFooter = false
+            getItem(footerPosition)?.let { footerItem ->
+                items.remove(footerItem)
+                notifyItemRemoved(footerPosition)
+            }
+        }
     }
 
     /**[setPagingUpdater]
@@ -194,6 +213,10 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
             notifyItemInserted(position)
         }
     }
+
+    /**[getItem]
+     * Returns item of adapter at current position
+     */
 
     fun getItem(position: Int): Any? {
         return if (items.lastIndex >= position) items[position] else null
@@ -257,6 +280,10 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
             }
         }
 
+        /**[getCount]
+         * Returns one page items count
+         */
+
         fun getCount(): Int {
             return count
         }
@@ -282,9 +309,17 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
 
         abstract fun loadNewItems()
 
+        /**[showPlaceholder]
+         * Calls same named method from [placeholderSwitcher] if it is not null
+         */
+
         fun showPlaceholder() {
             placeholderSwitcher?.showPlaceholder()
         }
+
+        /**[showPlaceholder]
+         * Calls same named method from [placeholderSwitcher] if it is not null
+         */
 
         fun hidePlaceholder() {
             placeholderSwitcher?.hidePlaceholder()
@@ -307,10 +342,17 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
     /**[PlaceholderSwitcher]
      * Not necessary interface, but you can realize it and add to updater in [RxPagingUpdater.setup] method
      * if you need to switch your placeholder state in case when updater loads empty or null list of items
-      */
+     */
 
     interface PlaceholderSwitcher {
+        /**[showPlaceholder]
+         * Implement this method with your logic for showing placeholder
+         */
         fun showPlaceholder()
+
+        /**[hidePlaceholder]
+         * Implement this method with your logic for hiding placeholder
+         */
         fun hidePlaceholder()
     }
 }
