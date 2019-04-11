@@ -20,11 +20,7 @@ enum class PAGING_LOADING_STATE {
  * @property loadingStateChannel
  */
 
-abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: CompositeDisposable) : RecyclerView.Adapter<VH>() {
-
-    //TODO 1. Add all comments
-    //TODO 2. Find way to replace PublishSubjects with some Observables
-    //TODO 3. Add simple example (?)
+abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: CompositeDisposable, private val initialLoad: Boolean = false) : RecyclerView.Adapter<VH>() {
 
     private var pagingUpdater: RxPagingUpdater? = null
     private var hasFooter = false
@@ -50,7 +46,7 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
     override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
         super.onAttachedToRecyclerView(recyclerView)
 
-        pagingUpdater?.loadNewItems()
+        if (initialLoad) pagingUpdater?.loadNewItems()
 
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
@@ -81,24 +77,24 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
     private fun subscribeToItemsChannel() {
         itemsChannel.let { channel ->
             disposables += channel.subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(
-                            { newItems ->
-                                addItems(newItems)
-                            }, {}, {}
-                    )
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                    { newItems ->
+                        addItems(newItems)
+                    }, {}, {}
+                )
         }
     }
 
     private fun subscribeToLoadingStateChannel() {
         loadingStateChannel.let { channel ->
             disposables += channel.subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(
-                            { newLoadingState ->
-                                updateLoadingState(newLoadingState)
-                            }, {}, {}
-                    )
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                    { newLoadingState ->
+                        updateLoadingState(newLoadingState)
+                    }, {}, {}
+                )
         }
     }
 
@@ -164,16 +160,21 @@ abstract class RxPagingAdapter<VH : RecyclerView.ViewHolder>(val disposables: Co
         pagingUpdater = updater
     }
 
-    /**[cleatItemsAndReload]
+    /**[clearItemsAndReload]
      * Resetting adapter and its updater to initial state
      * and loading items from pagination start
      */
 
-    fun cleatItemsAndReload() {
+    fun clearItemsAndReload() {
         items.clear()
         notifyDataSetChanged()
         pagingUpdater?.resetPosition()
         pagingUpdater?.loadNewItems()
+    }
+
+    fun clearItems() {
+        items.clear()
+        notifyDataSetChanged()
     }
 
     /**[addItems]
